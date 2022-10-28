@@ -16,6 +16,7 @@ import javax.sql.DataSource;
 import org.geojson.Feature;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.CRS.AxisOrder;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -51,6 +52,9 @@ public class DataRepositoryPG implements DataRepository {
     @Value("${srid.storage}")
     private int storageSRID;
 
+    @Autowired
+    private ProjectionRecognizer projectionRecognizer;
+
     @Override
     public UploadInfo create(SimpleFeatureCollection collection) throws Exception {
         UUID uuid = UUID.randomUUID();
@@ -72,14 +76,26 @@ public class DataRepositoryPG implements DataRepository {
 
             int srid = detectSrid(c, geometryDescriptor, extent);
 
-            if (srid <= 0) {
-                throw new Exception("Could not detect crs");
-                // Do something
+            if (srid < 0) {
+                // flipped axis order
+                flipCoordinates(c, dataTable, geometryColumn);
+                srid = -srid;
             }
 
             setSrid(c, dataTable, geometryColumn, srid);
             if (storageSRID != srid) {
-                transform(c, dataTable, geometryColumn, storageSRID);
+                try {
+                    transform(c, dataTable, geometryColumn, storageSRID);
+                } catch (Exception e) {
+                    // Try flipping the axis order one more time
+                    try {
+                        flipCoordinates(c, dataTable, geometryColumn);
+                        transform(c, dataTable, geometryColumn, storageSRID);
+                    } catch (Exception e2) {
+                        throw e;
+                    }
+                    // Flipping it the second time worked, just roll with it
+                }
                 extent = getExtent(c, dataTable, geometryColumn);
             }
 
@@ -106,17 +122,14 @@ public class DataRepositoryPG implements DataRepository {
                 .collect(Collectors.toList());
     }
 
-    private int detectSrid(Connection c, GeometryDescriptor geometryDescriptor, Envelope extent) {
-        if (geometryDescriptor == null) {
-            return 0;
-        }
-
+    private int detectSrid(Connection c, GeometryDescriptor geometryDescriptor, Envelope extent) throws Exception {
         CoordinateReferenceSystem crs = geometryDescriptor.getCoordinateReferenceSystem();
         if (crs != null) {
+            int f = CRS.getAxisOrder(crs) == AxisOrder.NORTH_EAST ? -1 : 1;
             try {
                 Integer code = CRS.lookupEpsgCode(crs, false);
                 if (code != null) {
-                    return code;
+                    return f * code;
                 }
             } catch (Exception ignore) {
                 // Just ignore it
@@ -125,14 +138,14 @@ public class DataRepositoryPG implements DataRepository {
             try {
                 Integer code = CRS.lookupEpsgCode(crs, true);
                 if (code != null) {
-                    return code;
+                    return f * code;
                 }
             } catch (Exception ignore) {
+                throw new Exception("Could not find epsg code for recognized CRS");
                 // Just ignore it
             }
         }
-
-        return 0;
+        return projectionRecognizer.getSRID(extent);
     }
     
     private Envelope getExtent(Connection c, String table, String geometryColumn) throws Exception {
@@ -152,6 +165,13 @@ public class DataRepositoryPG implements DataRepository {
         try (Connection c = ds.getConnection()) {
             setSrid(c, getDataTable(uuid), GEOM_COLUMN, srid);
         }
+    }
+
+    private void flipCoordinates(Connection c, String table, String geometryColumn) throws Exception {
+        String update = String.format(
+                "UPDATE %s SET %s = ST_FlipCoordinates(%s)",
+                table, geometryColumn, geometryColumn);
+        JDBC.executeUpdate(c, update);
     }
 
     private void setSrid(Connection c, String table, String geometryColumn, int srid) throws Exception {
