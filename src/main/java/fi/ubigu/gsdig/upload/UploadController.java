@@ -20,6 +20,8 @@ import java.util.zip.GZIPInputStream;
 import org.geotools.data.DataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -42,6 +44,7 @@ import fi.ubigu.gsdig.arealdivision.ArealDivision;
 import fi.ubigu.gsdig.arealdivision.ArealDivisionService;
 import fi.ubigu.gsdig.arealdivision.AttributeInfo;
 import fi.ubigu.gsdig.data.DataRepository;
+import fi.ubigu.gsdig.data.GSDIGFeatureReader;
 import fi.ubigu.gsdig.joins.JobRepository;
 import fi.ubigu.gsdig.joins.JoinJob;
 import fi.ubigu.gsdig.joins.JoinRequest;
@@ -52,11 +55,14 @@ import fi.ubigu.gsdig.unitdata.SensitivitySetting;
 import fi.ubigu.gsdig.unitdata.UnitDataService;
 import fi.ubigu.gsdig.unitdata.UnitDataset;
 import fi.ubigu.gsdig.upload.format.UploadFormat;
+import fi.ubigu.gsdig.utility.FileSafety;
 import fi.ubigu.gsdig.utility.Unzip;
 
 @RestController
 @RequestMapping("/uploads")
 public class UploadController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GSDIGFeatureReader.class);
 
     @Autowired
     private List<UploadFormat> uploadFormats;
@@ -104,7 +110,7 @@ public class UploadController {
             @RequestParam("file") MultipartFile in,
             Principal principal) throws Exception {
         UUID userId = User.getUserId(principal);
-        return saveAsFileAndImport(userId, in::transferTo);
+        return saveAsFileAndImport(userId, in.getOriginalFilename(), in::transferTo);
     }
 
     @PostMapping("/url")
@@ -113,9 +119,19 @@ public class UploadController {
             Principal principal) throws Exception {
         UUID userId = User.getUserId(principal);
         return importOAPIFCollection(userId, importFromURL)
-                .orElseGet(() -> saveAsFileAndImport(userId, file -> downloadURLtoFile(importFromURL, file)));
+                .orElseGet(() -> saveAsFileAndImport(userId, getFileNameFromURL(importFromURL.getUrl()), file -> downloadURLtoFile(importFromURL, file)));
     }
     
+    private String getFileNameFromURL(String url) {
+        int j = url.indexOf('?');
+        if (j < 0) {
+            int i = url.lastIndexOf('/');
+            return url.substring(i + 1);
+        }
+        int i = url.lastIndexOf('/', j - 1);
+        return url.substring(i + 1, j);
+    }
+
     private Optional<List<UploadInfo>> importOAPIFCollection(UUID userId, ImportFromURL importFromURL) {
         try {
             HttpClient http = new HttpClient(om, importFromURL.getUsername(), importFromURL.getPassword());
@@ -168,21 +184,20 @@ public class UploadController {
         }
     }
 
-    private List<UploadInfo> saveAsFileAndImport(UUID userId, FileTransfer fileWriter) {
-        UUID fileUuid = UUID.randomUUID();
-        String uuidUnderscored = fileUuid.toString().replace('-', '_');
-        String filename = uuidUnderscored + ".tmp";
+    private List<UploadInfo> saveAsFileAndImport(UUID userId, String originalFileName, FileTransfer fileWriter) {
+        UUID uuid = UUID.randomUUID();
+        String uuidUnderscored = uuid.toString().replace('-', '_');
 
-        File uploadRoot = new File(uploadDirectory);
-        if (!uploadRoot.exists()) {
-            uploadRoot.mkdirs();
+        File dir = new File(uploadDirectory, uuidUnderscored);
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
 
-        File file = new File(uploadRoot, filename);
         try {
+            String filename = originalFileName != null ? originalFileName : uuidUnderscored + ".tmp";
+            File file = FileSafety.newFile(dir, filename);
             fileWriter.transferTo(file);
-
-            file = Unzip.unzipIfZipFile(file, new File(uploadRoot, uuidUnderscored));
+            file = Unzip.unzipIfZipFile(file, new File(dir, uuidUnderscored));
             List<UploadInfo> info = new ArrayList<>();
             for (UploadFormat uploadFormat : uploadFormats) {
                 if (uploadFormat.read(file, (typeName, source) -> trySaving(typeName, source, userId, info))) {
@@ -192,11 +207,14 @@ public class UploadController {
 
             // Invalid format
             throw new IllegalArgumentException();
+        } catch (RuntimeException e) {
+            LOG.error(e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
             throw new RuntimeException(e);
         } finally {
-            FileSystemUtils.deleteRecursively(file);
+            FileSystemUtils.deleteRecursively(dir);
         }
     }
 
@@ -238,10 +256,15 @@ public class UploadController {
     }
 
     private void trySaving(String typeName, SimpleFeatureCollection collection, UUID userId, List<UploadInfo> out) {
+        if (collection.getSchema().getGeometryDescriptor() == null) {
+            throw new RuntimeException("No geometry found");
+        }
         try {
             UploadInfo info = dataRepository.create(collection).withTypeName(typeName);
             repository.create(info, userId);
             out.add(info);
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
