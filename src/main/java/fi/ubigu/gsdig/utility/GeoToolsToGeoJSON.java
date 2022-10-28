@@ -10,7 +10,9 @@ import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.CoordinateSequence;
 import org.locationtech.jts.geom.CoordinateSequenceFilter;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.opengis.feature.Property;
 import org.opengis.feature.simple.SimpleFeature;
@@ -34,12 +36,30 @@ public class GeoToolsToGeoJSON {
     }
 
     public static GeoJsonObject toGeometry(Geometry g) {
-        if (g instanceof Polygon) {
+        if (g instanceof Point)  {
+            return toPoint((Point) g);
+        } else if (g instanceof MultiPoint) {
+            return toMultiPoint((MultiPoint) g);
+        } else if (g instanceof Polygon) {
             return toPolygon((Polygon) g);
         } else if (g instanceof MultiPolygon) {
             return toMultiPolygon((MultiPolygon) g);
         }
         throw new IllegalArgumentException("Geometry type " + g.getClass().getName() + " not yet implemented");
+    }
+    
+    private static org.geojson.Point toPoint(Point g) {
+        return new org.geojson.Point(g.getX(), g.getY());
+    }
+    
+    private static org.geojson.MultiPoint toMultiPoint(MultiPoint g) {
+        org.geojson.MultiPoint mp = new org.geojson.MultiPoint();
+        final int n = g.getNumGeometries();
+        for (int i = 0; i < n; i++) {
+            Point p = (Point) g.getGeometryN(i);
+            mp.add(new LngLatAlt(p.getX(), p.getY()));
+        }
+        return mp;
     }
 
     private static org.geojson.MultiPolygon toMultiPolygon(MultiPolygon g) {
