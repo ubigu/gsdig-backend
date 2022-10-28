@@ -1,7 +1,6 @@
 package fi.ubigu.gsdig.upload.format;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
@@ -36,21 +35,25 @@ public class ShpFormat implements UploadFormat {
         DataStore store = null;
         try {
             store = DataStoreFinder.getDataStore(params);
-            String typeName =  store.getTypeNames()[0];
-            SimpleFeatureSource source = store.getFeatureSource(typeName);
-            SimpleFeatureCollection collection = source.getFeatures();
+            String typeName;
+            SimpleFeatureCollection collection;
+            try {
+                typeName =  store.getTypeNames()[0];
+                SimpleFeatureSource source = store.getFeatureSource(typeName);
+                collection = source.getFeatures();
+                if (collection.isEmpty()) {
+                    return false;
+                }
+            } catch (Exception e) {
+                return false;
+            }
             next.accept(typeName, collection);
             return true;
-        } catch (IOException e) {
-            // Just ignore it
-            e.printStackTrace();
         } finally {
             if (store != null) {
                 store.dispose();
             }
         }
-
-        return false;
     }
 
     @Override

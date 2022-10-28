@@ -16,7 +16,14 @@ public class Unzip {
     private static final int MAX_NUMBER_OF_ZIP_ENTRIES = 10;
     
     public static File unzipIfZipFile(File file, File dir) throws Exception {
-        if (!Arrays.equals(ZIP_HEADER, Utils.readFirstNBytes(file, ZIP_HEADER.length))) {
+        byte[] firstNBytes;
+        try {
+            firstNBytes = Utils.readFirstNBytes(file, ZIP_HEADER.length);
+        } catch (IllegalArgumentException e) {
+            // Not enough bytes
+            return file;
+        }
+        if (!Arrays.equals(ZIP_HEADER, firstNBytes)) {
             // Not zip file
             return file;
         }
@@ -43,7 +50,7 @@ public class Unzip {
                 if (++i == maxNumberOfEntries) {
                     throw new IllegalArgumentException("Zip files contains too many entries!");
                 }
-                File newFile = newFile(destDir, zipEntry);
+                File newFile = FileSafety.newFile(destDir, zipEntry.getName());
                 if (zipEntry.isDirectory()) {
                     if (!newFile.isDirectory() && !newFile.mkdirs()) {
                         throw new IOException("Failed to create directory " + newFile);
@@ -67,21 +74,5 @@ public class Unzip {
         }
     }
 
-    /**
-     * Avoid Zip Slip
-     * @see https://snyk.io/research/zip-slip-vulnerability
-     */
-    private static File newFile(File destDir, ZipEntry zipEntry) throws IOException {
-        File destFile = new File(destDir, zipEntry.getName());
-
-        String destDirPath = destDir.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
-
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
-        }
-
-        return destFile;
-    }
 
 }

@@ -1,7 +1,6 @@
 package fi.ubigu.gsdig.upload.format;
 
 import java.io.File;
-import java.util.List;
 import java.util.function.BiConsumer;
 
 import org.geotools.data.csv.CSVDataStore;
@@ -20,21 +19,25 @@ public class CSVFormat implements UploadFormat {
 
     @Override
     public boolean read(File file, BiConsumer<String, SimpleFeatureCollection> next) throws Exception {
-        List<File> readableFiles = getReadableFiles(file);
-
-        for (File f : readableFiles) {
+        for (File f : getReadableFiles(file)) {
             CSVDataStore store = null;
             try {
-                CSVFileState csvFileState = new CSVFileState(f);
-                store = new CSVDataStore(csvFileState, new QgisCSVStrategy(csvFileState));
-                String typeName = store.getTypeNames()[0];
-                SimpleFeatureSource source = store.getFeatureSource(typeName);
-                SimpleFeatureCollection collection = source.getFeatures();
+                String typeName;
+                SimpleFeatureCollection collection;
+                try {
+                    CSVFileState csvFileState = new CSVFileState(f);
+                    store = new CSVDataStore(csvFileState, new QgisCSVStrategy(csvFileState));
+                    typeName = store.getTypeNames()[0];
+                    SimpleFeatureSource source = store.getFeatureSource(typeName);
+                    collection = source.getFeatures();
+                    if (collection.isEmpty()) {
+                        continue;
+                    }
+                } catch (Exception ignore) {
+                    continue;
+                }
                 next.accept(typeName, collection);
                 return true;
-            } catch (Exception e) {
-                // Just ignore it
-                e.printStackTrace();
             } finally {
                 if (store != null) {
                     store.dispose();
