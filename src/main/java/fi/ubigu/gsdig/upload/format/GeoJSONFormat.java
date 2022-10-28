@@ -26,15 +26,21 @@ public class GeoJSONFormat implements UploadFormat {
         for (File readableFile : getReadableFiles(file)) {
             DataStore store = null;
             try {
-                store = new GeoJSONDataStore(readableFile, om, null);
-                String typeName = store.getTypeNames()[0];
-                SimpleFeatureSource source = store.getFeatureSource(typeName);
-                SimpleFeatureCollection collection = source.getFeatures();
+                String typeName;
+                SimpleFeatureCollection collection;
+                try {
+                    store = new GeoJSONDataStore(readableFile, om, null);
+                    typeName = store.getTypeNames()[0];
+                    SimpleFeatureSource source = store.getFeatureSource(typeName);
+                    collection = source.getFeatures();
+                    if (collection.isEmpty()) {
+                        continue;
+                    }
+                } catch (Exception ignore) {
+                    continue;
+                }
                 next.accept(typeName, collection);
                 return true;
-            } catch (Exception ignore) {
-                // Just ignore it
-                ignore.printStackTrace();
             } finally {
                 if (store != null) {
                     store.dispose();
