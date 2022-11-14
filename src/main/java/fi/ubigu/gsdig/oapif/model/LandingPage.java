@@ -1,6 +1,8 @@
-package fi.ubigu.gsdig.oapif;
+package fi.ubigu.gsdig.oapif.model;
 
 import java.util.List;
+
+import fi.ubigu.gsdig.oapi.model.Link;
 
 public class LandingPage {
 

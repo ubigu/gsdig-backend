@@ -1,4 +1,4 @@
-package fi.ubigu.gsdig.oapif;
+package fi.ubigu.gsdig.oapip.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;

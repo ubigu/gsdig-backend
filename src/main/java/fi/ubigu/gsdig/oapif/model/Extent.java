@@ -1,4 +1,4 @@
-package fi.ubigu.gsdig.oapif;
+package fi.ubigu.gsdig.oapif.model;
 
 import java.time.Instant;
 
