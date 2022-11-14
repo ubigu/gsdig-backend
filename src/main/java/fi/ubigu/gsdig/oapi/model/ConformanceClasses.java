@@ -1,4 +1,4 @@
-package fi.ubigu.gsdig.oapif;
+package fi.ubigu.gsdig.oapi.model;
 
 import java.util.List;
 

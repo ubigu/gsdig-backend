@@ -9,6 +9,8 @@ import org.geojson.GeoJsonObject;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+import fi.ubigu.gsdig.oapi.model.Link;
+
 @JsonPropertyOrder("type")
 public class FeatureResponse {
 

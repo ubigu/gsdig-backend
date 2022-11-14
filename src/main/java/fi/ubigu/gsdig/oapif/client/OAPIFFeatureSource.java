@@ -15,8 +15,8 @@ import org.opengis.filter.Filter;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import fi.ubigu.gsdig.oapif.CRSUtil;
-import fi.ubigu.gsdig.oapif.CollectionInfo;
 import fi.ubigu.gsdig.oapif.FeatureCollectionResponse;
+import fi.ubigu.gsdig.oapif.model.CollectionInfo;
 import fi.ubigu.gsdig.utility.GeoJSONToGeoTools;
 
 public class OAPIFFeatureSource extends ContentFeatureSource {

@@ -6,5 +6,6 @@ public enum StatusCode {
     running,
     succesful,
     failed,
+    dimissed
 
 }

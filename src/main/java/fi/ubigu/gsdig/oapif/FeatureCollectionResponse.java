@@ -8,6 +8,8 @@ import org.geojson.Feature;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+import fi.ubigu.gsdig.oapi.model.Link;
+
 @JsonPropertyOrder({ "type", "numberReturned", "timeStamp", "links", "features" })
 public class FeatureCollectionResponse {
 

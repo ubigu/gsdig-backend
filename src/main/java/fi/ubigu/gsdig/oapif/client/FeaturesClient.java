@@ -5,12 +5,12 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import fi.ubigu.gsdig.oapif.CollectionInfo;
-import fi.ubigu.gsdig.oapif.CollectionsInfo;
-import fi.ubigu.gsdig.oapif.ConformanceClasses;
+import fi.ubigu.gsdig.oapi.model.ConformanceClasses;
 import fi.ubigu.gsdig.oapif.FeatureCollectionResponse;
 import fi.ubigu.gsdig.oapif.FeatureResponse;
-import fi.ubigu.gsdig.oapif.LandingPage;
+import fi.ubigu.gsdig.oapif.model.CollectionInfo;
+import fi.ubigu.gsdig.oapif.model.CollectionsInfo;
+import fi.ubigu.gsdig.oapif.model.LandingPage;
 import fi.ubigu.gsdig.utility.HttpHelper;
 
 public class FeaturesClient {

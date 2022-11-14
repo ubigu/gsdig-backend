@@ -10,7 +10,7 @@ import org.geotools.data.store.ContentEntry;
 import org.geotools.feature.NameImpl;
 import org.opengis.feature.type.Name;
 
-import fi.ubigu.gsdig.oapif.CollectionInfo;
+import fi.ubigu.gsdig.oapif.model.CollectionInfo;
 
 public class OAPIFDataStore extends ContentDataStore {
 

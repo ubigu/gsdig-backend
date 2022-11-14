@@ -42,16 +42,16 @@ import org.springframework.web.server.ResponseStatusException;
 import fi.ubigu.gsdig.arealdivision.ArealDivision;
 import fi.ubigu.gsdig.arealdivision.ArealDivisionService;
 import fi.ubigu.gsdig.arealdivision.AttributeInfo;
-import fi.ubigu.gsdig.oapif.CollectionInfo;
-import fi.ubigu.gsdig.oapif.CollectionsInfo;
-import fi.ubigu.gsdig.oapif.ConformanceClass;
-import fi.ubigu.gsdig.oapif.ConformanceClasses;
+import fi.ubigu.gsdig.oapi.model.ConformanceClasses;
+import fi.ubigu.gsdig.oapi.model.Link;
 import fi.ubigu.gsdig.oapif.FeatureCollectionResponse;
 import fi.ubigu.gsdig.oapif.FeatureResponse;
 import fi.ubigu.gsdig.oapif.FeaturesRequestParser;
 import fi.ubigu.gsdig.oapif.GetItemsRequest;
-import fi.ubigu.gsdig.oapif.LandingPage;
-import fi.ubigu.gsdig.oapif.Link;
+import fi.ubigu.gsdig.oapif.model.CollectionInfo;
+import fi.ubigu.gsdig.oapif.model.CollectionsInfo;
+import fi.ubigu.gsdig.oapif.model.FeaturesConformanceClass;
+import fi.ubigu.gsdig.oapif.model.LandingPage;
 import fi.ubigu.gsdig.permission.PermissionType;
 import fi.ubigu.gsdig.utility.GeoToolsToGeoJSON;
 import fi.ubigu.gsdig.utility.Utils;
@@ -135,7 +135,7 @@ public class GSDIGFeaturesController {
     @GetMapping("/conformance")
     @Operation(tags = "Capabilities", summary = "conformance declaration")
     public ConformanceClasses getConformance() {
-        List<String> conformanceURIs = Arrays.stream(ConformanceClass.values())
+        List<String> conformanceURIs = Arrays.stream(FeaturesConformanceClass.values())
                 .map(it -> it.url)
                 .collect(Collectors.toList());
 
